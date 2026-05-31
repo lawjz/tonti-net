@@ -46,9 +46,9 @@ export async function POST(
       );
     }
 
-    const requesterIsMember = group.members.some(
-      (member) => member.userId === session.user.id,
-    );
+  const requesterIsMember = group.members.some(
+  (member: { userId: string }) => member.userId === session.user.id,
+);
 
     if (!requesterIsMember) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
