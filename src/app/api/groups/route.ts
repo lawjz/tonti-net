@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const group = await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const group = await prisma.$transaction(async (tx: any) => {
       const createdGroup = await tx.group.create({
         data: {
           name,
