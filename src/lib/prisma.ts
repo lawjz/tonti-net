@@ -1,12 +1,15 @@
-import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PrismaClient } = require("@prisma/client");
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma: any | undefined;
 };
 
-let prismaInstance: PrismaClient;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let prismaInstance: any;
 
 if (globalForPrisma.prisma) {
   prismaInstance = globalForPrisma.prisma;
