@@ -77,9 +77,9 @@ export async function GET(
       );
     }
 
-    const isMember = group.members.some(
-      (member) => member.user.id === session.user.id,
-    );
+const isMember = group.members.some(
+  (member: { user: { id: string } }) => member.user.id === session.user.id,
+);
 
     if (!isMember) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
