@@ -15,87 +15,90 @@ export async function POST(
     }
 
     const body = await request.json();
-    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const memberId = typeof body.memberId === "string" ? body.memberId : "";
+    const amount = Number(body.amount);
 
-    if (!email) {
-      return NextResponse.json({ error: "Email requis" }, { status: 400 });
+    if (!memberId || !amount) {
+      return NextResponse.json(
+        { error: "Champs requis manquants" },
+        { status: 400 },
+      );
+    }
+
+    if (amount <= 0) {
+      return NextResponse.json(
+        { error: "Le montant doit être supérieur à 0" },
+        { status: 400 },
+      );
     }
 
     const group = await prisma.group.findUnique({
       where: { id },
-      include: {
-        members: true,
-      },
+      include: { members: true },
     });
 
     if (!group) {
-      return NextResponse.json(
-        { error: "Groupe introuvable" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Groupe introuvable" }, { status: 404 });
     }
 
-    if (group.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Seul le créateur du groupe peut ajouter un membre" },
-        { status: 403 },
-      );
-    }
-
-    if (group.members.length >= group.maxMembers) {
-      return NextResponse.json(
-        { error: "Le groupe a atteint sa capacité maximale" },
-        { status: 400 },
-      );
-    }
-
-    const targetUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!targetUser) {
-      return NextResponse.json(
-        { error: "Aucun utilisateur trouvé avec cet email sur TONTI-NET" },
-        { status: 404 },
-      );
-    }
-
-    const alreadyMember = group.members.some(
-      (member) => member.userId === targetUser.id,
+    const requesterIsMember = group.members.some(
+      (member: { userId: string }) => member.userId === session.user.id,
     );
 
-    if (alreadyMember) {
+    if (!requesterIsMember) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const targetMember = group.members.find(
+      (member: { id: string; userId: string; order: number }) =>
+        member.id === memberId,
+    );
+
+    if (!targetMember) {
       return NextResponse.json(
-        { error: "Cet utilisateur est déjà membre du groupe" },
+        { error: "Ce membre n'appartient pas au groupe" },
         { status: 400 },
       );
     }
 
-    const nextOrder = group.members.length + 1;
-
-    const newMember = await prisma.$transaction(async (tx) => {
-      const member = await tx.member.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contribution = await prisma.$transaction(async (tx: any) => {
+      const createdContribution = await tx.contribution.create({
         data: {
-          userId: targetUser.id,
+          amount,
+          memberId,
           groupId: group.id,
-          order: nextOrder,
+          status: "paid",
+        },
+        include: {
+          member: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
         },
       });
 
       await tx.round.updateMany({
         where: {
           groupId: group.id,
-          roundNumber: nextOrder,
+          roundNumber: targetMember.order,
         },
         data: {
-          recipientId: member.id,
+          status: "completed",
         },
       });
 
-      return member;
+      return createdContribution;
     });
 
-    return NextResponse.json(newMember, { status: 201 });
+    return NextResponse.json(contribution, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: getErrorMessage(error) || "Erreur serveur" },
