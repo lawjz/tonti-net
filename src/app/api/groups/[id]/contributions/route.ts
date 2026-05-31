@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+// This safely extracts the Prisma Transaction client type without needing the Prisma namespace
+type TransactionClient = Parameters<typeof prisma.$transaction>[0];
 
 export async function POST(
   request: NextRequest,
@@ -61,8 +63,9 @@ export async function POST(
       );
     }
 
+    // Using the custom TransactionClient type here
     const contribution = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
+      async (tx: TransactionClient) => {
         const createdContribution = await tx.contribution.create({
           data: {
             amount,
