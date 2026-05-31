@@ -54,7 +54,7 @@ export async function POST(
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const targetMember = group.members.find((member) => member.id === memberId);
+  const targetMember = group.members.find((member: { id: string; userId: string }) => member.id === memberId);
 
     if (!targetMember) {
       return NextResponse.json(
