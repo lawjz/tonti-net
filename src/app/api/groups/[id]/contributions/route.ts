@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -34,27 +35,24 @@ export async function POST(
 
     const group = await prisma.group.findUnique({
       where: { id },
-      include: {
-        members: true,
-      },
+      include: { members: true },
     });
 
     if (!group) {
-      return NextResponse.json(
-        { error: "Groupe introuvable" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Groupe introuvable" }, { status: 404 });
     }
 
-  const requesterIsMember = group.members.some(
-  (member: { userId: string }) => member.userId === session.user.id,
-);
+    const requesterIsMember = group.members.some(
+      (member: { userId: string }) => member.userId === session.user.id,
+    );
 
     if (!requesterIsMember) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-  const targetMember = group.members.find((member: { id: string; userId: string }) => member.id === memberId);
+    const targetMember = group.members.find(
+      (member: { id: string; userId: string; order: number }) => member.id === memberId,
+    );
 
     if (!targetMember) {
       return NextResponse.json(
@@ -63,41 +61,43 @@ export async function POST(
       );
     }
 
-    const contribution = await prisma.$transaction(async (tx) => {
-      const createdContribution = await tx.contribution.create({
-        data: {
-          amount,
-          memberId,
-          groupId: group.id,
-          status: "paid",
-        },
-        include: {
-          member: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
+    const contribution = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const createdContribution = await tx.contribution.create({
+          data: {
+            amount,
+            memberId,
+            groupId: group.id,
+            status: "paid",
+          },
+          include: {
+            member: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      await tx.round.updateMany({
-        where: {
-          groupId: group.id,
-          roundNumber: targetMember.order,
-        },
-        data: {
-          status: "completed",
-        },
-      });
+        await tx.round.updateMany({
+          where: {
+            groupId: group.id,
+            roundNumber: targetMember.order,
+          },
+          data: {
+            status: "completed",
+          },
+        });
 
-      return createdContribution;
-    });
+        return createdContribution;
+      },
+    );
 
     return NextResponse.json(contribution, { status: 201 });
   } catch (error) {
