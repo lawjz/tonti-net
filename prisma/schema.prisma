@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  emailVerified Boolean  @default(false)
+  image         String?
+  sessions      Session[]
+  accounts      Account[]
+  memberships   Member[]
+  ownedGroups   Group[]  @relation("GroupOwner")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String   @id
+  accountId         String
+  providerId        String
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken       String?
+  refreshToken      String?
+  idToken           String?
+  expiresAt         DateTime?
+  password          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Group {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  amount        Float
+  frequency     String
+  maxMembers    Int
+  createdAt     DateTime @default(now())
+  ownerId       String
+  owner         User     @relation("GroupOwner", fields: [ownerId], references: [id])
+  members       Member[]
+  contributions Contribution[]
+  rounds        Round[]
+}
+
+model Member {
+  id            String   @id @default(cuid())
+  joinedAt      DateTime @default(now())
+  order         Int
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  groupId       String
+  group         Group    @relation(fields: [groupId], references: [id])
+  contributions Contribution[]
+  rounds        Round[]
+}
+
+model Contribution {
+  id        String   @id @default(cuid())
+  amount    Float
+  paidAt    DateTime @default(now())
+  status    String   @default("paid")
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+}
+
+model Round {
+  id          String   @id @default(cuid())
+  roundNumber Int
+  scheduledAt DateTime
+  status      String   @default("upcoming")
+  groupId     String
+  group       Group    @relation(fields: [groupId], references: [id])
+  recipientId String
+  recipient   Member   @relation(fields: [recipientId], references: [id])
+}
