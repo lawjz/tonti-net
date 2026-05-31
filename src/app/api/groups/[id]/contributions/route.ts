@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// This safely extracts the Prisma Transaction client type without needing the Prisma namespace
-type TransactionClient = Parameters<typeof prisma.$transaction>[0];
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -53,7 +50,8 @@ export async function POST(
     }
 
     const targetMember = group.members.find(
-      (member: { id: string; userId: string; order: number }) => member.id === memberId,
+      (member: { id: string; userId: string; order: number }) =>
+        member.id === memberId,
     );
 
     if (!targetMember) {
@@ -63,44 +61,42 @@ export async function POST(
       );
     }
 
-    // Using the custom TransactionClient type here
-    const contribution = await prisma.$transaction(
-      async (tx: TransactionClient) => {
-        const createdContribution = await tx.contribution.create({
-          data: {
-            amount,
-            memberId,
-            groupId: group.id,
-            status: "paid",
-          },
-          include: {
-            member: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                  },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contribution = await prisma.$transaction(async (tx: any) => {
+      const createdContribution = await tx.contribution.create({
+        data: {
+          amount,
+          memberId,
+          groupId: group.id,
+          status: "paid",
+        },
+        include: {
+          member: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
                 },
               },
             },
           },
-        });
+        },
+      });
 
-        await tx.round.updateMany({
-          where: {
-            groupId: group.id,
-            roundNumber: targetMember.order,
-          },
-          data: {
-            status: "completed",
-          },
-        });
+      await tx.round.updateMany({
+        where: {
+          groupId: group.id,
+          roundNumber: targetMember.order,
+        },
+        data: {
+          status: "completed",
+        },
+      });
 
-        return createdContribution;
-      },
-    );
+      return createdContribution;
+    });
 
     return NextResponse.json(contribution, { status: 201 });
   } catch (error) {
