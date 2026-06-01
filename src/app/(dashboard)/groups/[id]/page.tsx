@@ -63,6 +63,22 @@ type GroupDetails = {
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR");
 
+async function readApiResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    error:
+      text && !text.trim().startsWith("<")
+        ? text
+        : "Le serveur a renvoye une reponse invalide.",
+  };
+}
+
 export default function GroupDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -115,7 +131,7 @@ export default function GroupDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: newMemberEmail.trim() }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "Ajout impossible");
@@ -152,7 +168,7 @@ export default function GroupDetailPage() {
           amount: group.amount,
         }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "Enregistrement impossible");

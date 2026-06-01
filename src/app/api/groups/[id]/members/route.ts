@@ -11,30 +11,24 @@ export async function POST(
     const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return NextResponse.json({ error: "Non autorise" }, { status: 401 });
     }
 
     const body = await request.json();
-    const memberId = typeof body.memberId === "string" ? body.memberId : "";
-    const amount = Number(body.amount);
+    const email = typeof body.email === "string" ? body.email.trim() : "";
 
-    if (!memberId || !amount) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Champs requis manquants" },
-        { status: 400 },
-      );
-    }
-
-    if (amount <= 0) {
-      return NextResponse.json(
-        { error: "Le montant doit être supérieur à 0" },
+        { error: "Veuillez renseigner l'email du membre" },
         { status: 400 },
       );
     }
 
     const group = await prisma.group.findUnique({
       where: { id },
-      include: { members: true },
+      include: {
+        members: true,
+      },
     });
 
     if (!group) {
@@ -46,40 +40,61 @@ export async function POST(
     );
 
     if (!requesterIsMember) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
     }
 
-    const targetMember = group.members.find(
-      (member: { id: string; userId: string; order: number }) =>
-        member.id === memberId,
-    );
-
-    if (!targetMember) {
+    if (group.members.length >= group.maxMembers) {
       return NextResponse.json(
-        { error: "Ce membre n'appartient pas au groupe" },
+        { error: "Ce groupe a deja atteint le nombre maximum de membres" },
         { status: 400 },
       );
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Aucun utilisateur n'existe avec cet email" },
+        { status: 404 },
+      );
+    }
+
+    const alreadyMember = group.members.some(
+      (member: { userId: string }) => member.userId === user.id,
+    );
+
+    if (alreadyMember) {
+      return NextResponse.json(
+        { error: "Cet utilisateur est deja membre du groupe" },
+        { status: 400 },
+      );
+    }
+
+    const nextOrder =
+      Math.max(0, ...group.members.map((member: { order: number }) => member.order)) +
+      1;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const contribution = await prisma.$transaction(async (tx: any) => {
-      const createdContribution = await tx.contribution.create({
+    const member = await prisma.$transaction(async (tx: any) => {
+      const createdMember = await tx.member.create({
         data: {
-          amount,
-          memberId,
+          userId: user.id,
           groupId: group.id,
-          status: "paid",
+          order: nextOrder,
         },
         include: {
-          member: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },
@@ -88,17 +103,17 @@ export async function POST(
       await tx.round.updateMany({
         where: {
           groupId: group.id,
-          roundNumber: targetMember.order,
+          roundNumber: nextOrder,
         },
         data: {
-          status: "completed",
+          recipientId: createdMember.id,
         },
       });
 
-      return createdContribution;
+      return createdMember;
     });
 
-    return NextResponse.json(contribution, { status: 201 });
+    return NextResponse.json(member, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { error: getErrorMessage(error) || "Erreur serveur" },
