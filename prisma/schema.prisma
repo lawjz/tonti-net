@@ -57,6 +57,12 @@ model Verification {
   updatedAt  DateTime @updatedAt
 }
 
+model RateLimit {
+  key         String @id
+  count       Int
+  lastRequest BigInt
+}
+
 model Group {
   id            String   @id @default(cuid())
   name          String

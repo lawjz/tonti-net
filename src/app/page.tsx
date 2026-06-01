@@ -146,9 +146,6 @@ export default function Home() {
       <section className="px-4 pb-20 pt-32 sm:px-6 sm:pb-24 sm:pt-36 lg:px-8">
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
-            <div className="mb-6 inline-flex items-center rounded-full border border-[#16a34a]/20 bg-[#16a34a]/10 px-4 py-2 text-sm font-semibold text-[#15803d]">
-              Fintech Mali 🇲🇱
-            </div>
             <h1
               className="text-4xl leading-[1.05] sm:text-5xl md:text-6xl lg:text-7xl"
               style={{

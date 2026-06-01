@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   PlusCircle,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Mes Groupes", href: "/groups", icon: Users },
   { name: "Créer un groupe", href: "/groups/new", icon: PlusCircle },
+  { name: "Securite", href: "/security", icon: ShieldCheck },
 ];
 
 export default function DashboardLayout({

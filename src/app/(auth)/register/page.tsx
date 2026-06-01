@@ -17,6 +17,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  PASSWORD_REQUIREMENTS,
+  validatePasswordStrength,
+} from "@/lib/password-policy";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -33,8 +37,10 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères.");
+    const passwordError = validatePasswordStrength(password);
+
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
@@ -49,11 +55,11 @@ export default function RegisterPage() {
       });
 
       if (error) {
-        toast.error(error.message || "Inscription impossible.");
+        toast.error("Inscription impossible pour le moment.");
         return;
       }
 
-      toast.success("Compte créé avec succès.");
+      toast.success("Compte cree avec succes.");
       router.push("/dashboard");
       router.refresh();
     } catch {
@@ -79,10 +85,10 @@ export default function RegisterPage() {
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight">
-              Créer un compte TONTI-NET
+              Creer un compte TONTI-NET
             </CardTitle>
             <CardDescription>
-              Rejoignez et gérez vos tontines depuis un espace sécurisé.
+              Rejoignez et gerez vos tontines depuis un espace securise.
             </CardDescription>
           </div>
         </CardHeader>
@@ -94,7 +100,7 @@ export default function RegisterPage() {
                 id="name"
                 type="text"
                 autoComplete="name"
-                placeholder="Awa Traoré"
+                placeholder="Awa Traore"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 disabled={loading}
@@ -120,24 +126,27 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                placeholder="Au moins 6 caractères"
+                placeholder="Mot de passe robuste"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 disabled={loading}
                 required
               />
+              <p className="text-xs leading-5 text-muted-foreground">
+                {PASSWORD_REQUIREMENTS}
+              </p>
             </div>
             <Button
               type="submit"
               className="w-full bg-green-600 font-semibold text-white hover:bg-green-700"
               disabled={loading}
             >
-              {loading ? "Création en cours..." : "S'inscrire"}
+              {loading ? "Creation en cours..." : "S'inscrire"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="justify-center text-sm text-muted-foreground">
-          Vous avez déjà un compte ?{" "}
+          Vous avez deja un compte ?{" "}
           <Link
             href="/login"
             className="ml-1 font-semibold text-green-700 hover:underline"

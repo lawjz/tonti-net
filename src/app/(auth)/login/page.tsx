@@ -42,7 +42,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        toast.error(error.message || "Connexion impossible.");
+        toast.error("Identifiants invalides ou tentative temporairement bloquee.");
         return;
       }
 
@@ -95,7 +95,15 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">Mot de passe</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-green-700 hover:underline"
+                >
+                  Mot de passe oublie ?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
